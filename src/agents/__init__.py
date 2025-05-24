@@ -36,6 +36,7 @@ from .items import (
     RunItem,
     ToolCallItem,
     ToolCallOutputItem,
+    ToolMessageItem,
     TResponseInputItem,
 )
 from .lifecycle import AgentHooks, RunHooks
@@ -71,6 +72,7 @@ from .tool import (
     WebSearchTool,
     default_tool_error_function,
     function_tool,
+    message_tool,
 )
 from .tracing import (
     AgentSpanData,
@@ -197,6 +199,7 @@ __all__ = [
     "HandoffOutputItem",
     "ToolCallItem",
     "ToolCallOutputItem",
+    "ToolMessageItem",
     "ReasoningItem",
     "ModelResponse",
     "ItemHelpers",
@@ -227,6 +230,7 @@ __all__ = [
     "MCPToolApprovalRequest",
     "MCPToolApprovalFunctionResult",
     "function_tool",
+    "message_tool",
     "Usage",
     "add_trace_processor",
     "agent_span",

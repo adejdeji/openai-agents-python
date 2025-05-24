@@ -56,6 +56,7 @@ from .items import (
     RunItem,
     ToolCallItem,
     ToolCallOutputItem,
+    ToolMessageItem,
     TResponseInputItem,
 )
 from .lifecycle import RunHooks
@@ -260,7 +261,8 @@ class RunImpl:
                 config=run_config,
             ),
         )
-        new_step_items.extend([result.run_item for result in function_results])
+        for result in function_results:
+            new_step_items.extend(result.run_items)
         new_step_items.extend(computer_results)
 
         # Next, run the MCP approval requests
@@ -582,18 +584,32 @@ class RunImpl:
 
         results = await asyncio.gather(*tasks)
 
-        return [
-            FunctionToolResult(
-                tool=tool_run.function_tool,
-                output=result,
-                run_item=ToolCallOutputItem(
+        tool_results: list[FunctionToolResult] = []
+        for tool_run, result in zip(tool_runs, results):
+            func_tool = tool_run.function_tool
+            if func_tool.returns_messages:
+                msgs = result if isinstance(result, list) else [result]
+                run_items = [ToolMessageItem(raw_item=msg, agent=agent) for msg in msgs]
+            else:
+                run_items = [
+                    ToolCallOutputItem(
+                        output=result,
+                        raw_item=ItemHelpers.tool_call_output_item(
+                            tool_run.tool_call, str(result)
+                        ),
+                        agent=agent,
+                    )
+                ]
+
+            tool_results.append(
+                FunctionToolResult(
+                    tool=func_tool,
                     output=result,
-                    raw_item=ItemHelpers.tool_call_output_item(tool_run.tool_call, str(result)),
-                    agent=agent,
-                ),
+                    run_items=run_items,
+                )
             )
-            for tool_run, result in zip(tool_runs, results)
-        ]
+
+        return tool_results
 
     @classmethod
     async def execute_local_shell_calls(
@@ -888,6 +904,8 @@ class RunImpl:
             elif isinstance(item, ToolCallItem):
                 event = RunItemStreamEvent(item=item, name="tool_called")
             elif isinstance(item, ToolCallOutputItem):
+                event = RunItemStreamEvent(item=item, name="tool_output")
+            elif isinstance(item, ToolMessageItem):
                 event = RunItemStreamEvent(item=item, name="tool_output")
             elif isinstance(item, ReasoningItem):
                 event = RunItemStreamEvent(item=item, name="reasoning_item_created")

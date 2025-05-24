@@ -159,6 +159,16 @@ class ToolCallOutputItem(
 
 
 @dataclass
+class ToolMessageItem(RunItemBase[Message]):
+    """Represents a message returned directly from a tool."""
+
+    raw_item: Message
+    """The raw message."""
+
+    type: Literal["tool_message_item"] = "tool_message_item"
+
+
+@dataclass
 class ReasoningItem(RunItemBase[ResponseReasoningItem]):
     """Represents a reasoning item."""
 
@@ -204,6 +214,7 @@ RunItem: TypeAlias = Union[
     HandoffOutputItem,
     ToolCallItem,
     ToolCallOutputItem,
+    ToolMessageItem,
     ReasoningItem,
     MCPListToolsItem,
     MCPApprovalRequestItem,
