@@ -36,7 +36,7 @@ def _make_function_tool_result(
     )
     # For this test we don't care about the specific RunItem subclass, only the output field
     run_item = ToolCallOutputItem(agent=agent, raw_item=raw_item, output=output)
-    return FunctionToolResult(tool=tool, output=output, run_item=run_item)
+    return FunctionToolResult(tool=tool, output=output, run_items=[run_item])
 
 
 @pytest.mark.asyncio

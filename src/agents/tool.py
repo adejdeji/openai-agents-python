@@ -34,14 +34,14 @@ ToolFunction = Union[ToolFunctionWithoutContext[ToolParams], ToolFunctionWithCon
 
 @dataclass
 class FunctionToolResult:
-    tool: FunctionTool
+    tool: "FunctionTool"
     """The tool that was run."""
 
     output: Any
     """The output of the tool."""
 
-    run_item: RunItem
-    """The run item that was produced as a result of the tool call."""
+    run_items: list[RunItem]
+    """The run items that were produced as a result of the tool call."""
 
 
 @dataclass
@@ -73,6 +73,9 @@ class FunctionTool:
     strict_json_schema: bool = True
     """Whether the JSON schema is in strict mode. We **strongly** recommend setting this to True,
     as it increases the likelihood of correct JSON input."""
+
+    returns_messages: bool = False
+    """Whether the tool returns OpenAI message objects instead of plain text."""
 
 
 @dataclass
@@ -416,5 +419,66 @@ def function_tool(
     # Otherwise, we were used as @function_tool(...), so return a decorator
     def decorator(real_func: ToolFunction[...]) -> FunctionTool:
         return _create_function_tool(real_func)
+
+    return decorator
+
+
+@overload
+def message_tool(
+    func: ToolFunction[...],
+    *,
+    name_override: str | None = None,
+    description_override: str | None = None,
+    docstring_style: DocstringStyle | None = None,
+    use_docstring_info: bool = True,
+    failure_error_function: ToolErrorFunction | None = None,
+    strict_mode: bool = True,
+) -> FunctionTool:
+    ...
+
+
+@overload
+def message_tool(
+    *,
+    name_override: str | None = None,
+    description_override: str | None = None,
+    docstring_style: DocstringStyle | None = None,
+    use_docstring_info: bool = True,
+    failure_error_function: ToolErrorFunction | None = None,
+    strict_mode: bool = True,
+) -> Callable[[ToolFunction[...]], FunctionTool]:
+    ...
+
+
+def message_tool(
+    func: ToolFunction[...] | None = None,
+    *,
+    name_override: str | None = None,
+    description_override: str | None = None,
+    docstring_style: DocstringStyle | None = None,
+    use_docstring_info: bool = True,
+    failure_error_function: ToolErrorFunction | None = default_tool_error_function,
+    strict_mode: bool = True,
+) -> FunctionTool | Callable[[ToolFunction[...]], FunctionTool]:
+    """Decorator like `function_tool` but marks the tool as returning messages."""
+
+    def wrap(func_to_wrap: ToolFunction[...]) -> FunctionTool:
+        tool = function_tool(
+            func_to_wrap,
+            name_override=name_override,
+            description_override=description_override,
+            docstring_style=docstring_style,
+            use_docstring_info=use_docstring_info,
+            failure_error_function=failure_error_function,
+            strict_mode=strict_mode,
+        )
+        tool.returns_messages = True
+        return tool
+
+    if callable(func):
+        return wrap(func)
+
+    def decorator(real_func: ToolFunction[...]) -> FunctionTool:
+        return wrap(real_func)
 
     return decorator
